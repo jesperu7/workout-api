@@ -14,7 +14,7 @@ staged data model.
 | DB access | Plain SQL via Spring `JdbcClient` (`spring-boot-starter-jdbc`) |
 | Migrations | Flyway (`src/main/resources/db/migration`) |
 | Database | Postgres (Supabase) |
-| Auth | Supabase ES256 JWT, verified locally via JWKS (wired in M2) |
+| Auth | Supabase ES256 JWT, verified locally via JWKS (oauth2 resource server) |
 | Tests | JUnit 5 + Testcontainers (Postgres) |
 | Build | Gradle (Kotlin DSL), wrapper included |
 
@@ -53,6 +53,26 @@ with `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD`.
 
 > Without Docker you can still compile: `./gradlew compileKotlin compileTestKotlin`.
 
+## Manual auth check
+
+Verify the JWT auth path end-to-end against the local stack (two terminals; needs
+`supabase start` running):
+
+```bash
+# terminal 1 — run the app
+./gradlew bootRun
+
+# terminal 2 — mint a real token and call the API
+curl -s localhost:8080/actuator/health                                  # public  -> {"status":"UP"}
+TOKEN=$(scripts/dev-token.sh)                                           # ES256 token for dev@workout.test
+curl -s -H "Authorization: Bearer $TOKEN" localhost:8080/api/me         # -> 200 {"userId":...,"email":...}
+curl -s -o /dev/null -w '%{http_code}\n' localhost:8080/api/me          # no token -> 401
+```
+
+Run this after changing any `spring.security.oauth2.resourceserver.*` config — it's the
+interim guard for the auth decoder until the WireMock ES256 test lands (M6). The same calls
+are in `requests.http` for the IDE REST client.
+
 ## Migrations
 
 - `V1__init_v1_logging.sql` — measurement-type enum, `exercises` catalog, and the
@@ -65,6 +85,6 @@ constraints) land as later additive migrations. RLS is intentionally deferred
 
 ## Roadmap
 
-`M0` scaffold ✅ · `M1` local DB + connectivity · `M2` Supabase JWT auth ·
-`M3` exercise catalog · `M4` logging CRUD · `M5` bidirectional history ·
+`M0` scaffold ✅ · `M1` local DB + connectivity ✅ · `M2` Supabase JWT auth ✅ ·
+`M3` exercise catalog ← next · `M4` logging CRUD · `M5` bidirectional history ·
 `M6` hardening. Full detail in `workout-tracker-plan.md`.

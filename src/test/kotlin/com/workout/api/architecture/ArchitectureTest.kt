@@ -19,7 +19,7 @@ class ArchitectureTest {
     @Test
     fun `constructor injection only — no field injection`() {
         Konsist
-            .scopeFromProject()
+            .scopeFromProduction()
             .classes()
             .assertFalse { klass -> klass.properties().any { it.hasAnnotationOf(listOf(Autowired::class)) } }
     }
@@ -27,7 +27,7 @@ class ArchitectureTest {
     @Test
     fun `no wildcard imports`() {
         Konsist
-            .scopeFromProject()
+            .scopeFromProduction()
             .imports
             .assertFalse { it.isWildcard }
     }
@@ -35,7 +35,7 @@ class ArchitectureTest {
     @Test
     fun `only repositories access the database via JdbcClient`() {
         Konsist
-            .scopeFromProject()
+            .scopeFromProduction()
             .files
             .assertTrue { file ->
                 val usesJdbcClient =
@@ -47,7 +47,7 @@ class ArchitectureTest {
     @Test
     fun `services do not depend on web or servlet types`() {
         Konsist
-            .scopeFromProject()
+            .scopeFromProduction()
             .files
             .assertTrue { file ->
                 !file.path.endsWith("Service.kt") ||
@@ -61,7 +61,7 @@ class ArchitectureTest {
     @Test
     fun `controllers, services and repositories reside under the api package`() {
         Konsist
-            .scopeFromProject()
+            .scopeFromProduction()
             .classes()
             .assertTrue { klass ->
                 val isLayerClass = listOf("Controller", "Service", "Repository").any { klass.name.endsWith(it) }

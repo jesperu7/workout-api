@@ -17,7 +17,16 @@ spring:
   jackson:
     default-property-inclusion: non_null
 
-# Auth (oauth2 resource server -> Supabase JWKS) is wired in M2, not here.
+  # Auth: verify Supabase ES256 JWTs locally against the JWKS endpoint (no auth-server round trip).
+  # JWKS/issuer differ per environment — override via env (or the prod profile, when added).
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${SUPABASE_JWKS_URI:http://127.0.0.1:54321/auth/v1/.well-known/jwks.json}
+          # Supabase signs with ES256; a jwk-set-uri decoder defaults to RS256, so be explicit.
+          jws-algorithms: ${SUPABASE_JWT_ALG:ES256}
+          audiences: ${SUPABASE_JWT_AUDIENCE:authenticated}
 
 management:
   endpoints:
