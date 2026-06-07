@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: workout-api
+
+  # Local Supabase stack defaults (`supabase start`):
+  #   DB on 54322, API/JWKS on 54321, creds postgres/postgres, db `postgres`.
+  # Override per-environment with SPRING_DATASOURCE_* env vars.
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://127.0.0.1:54322/postgres}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  jackson:
+    default-property-inclusion: non_null
+
+# Auth (oauth2 resource server -> Supabase JWKS) is wired in M2, not here.
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
