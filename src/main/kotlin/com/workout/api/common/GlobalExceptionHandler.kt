@@ -14,4 +14,8 @@ class GlobalExceptionHandler {
     @ExceptionHandler(NotFoundException::class)
     fun handleNotFound(ex: NotFoundException): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.message ?: "Not found")
+
+    @ExceptionHandler(ValidationException::class)
+    fun handleValidation(ex: ValidationException): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.message ?: "Invalid request")
 }

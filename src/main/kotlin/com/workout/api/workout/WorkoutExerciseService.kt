@@ -36,12 +36,17 @@ class WorkoutExerciseService(
         return repo.findAllForWorkout(workoutId)
     }
 
+    fun get(
+        userId: UUID,
+        id: UUID,
+    ): WorkoutExercise = repo.findByIdForUser(id, userId) ?: throw NotFoundException("workout exercise $id not found")
+
     fun update(
         userId: UUID,
         id: UUID,
         req: UpdateWorkoutExerciseRequest,
     ): WorkoutExercise {
-        val existing = repo.findByIdForUser(id, userId) ?: throw NotFoundException("workout exercise $id not found")
+        val existing = get(userId, id)
         return repo.update(id, userId, req.position ?: existing.position, req.notes ?: existing.notes)
             ?: throw NotFoundException("workout exercise $id not found")
     }
