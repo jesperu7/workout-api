@@ -7,5 +7,5 @@ import org.springframework.boot.runApplication
 class WorkoutApiApplication
 
 fun main(args: Array<String>) {
-	runApplication<WorkoutApiApplication>(*args)
+    runApplication<WorkoutApiApplication>(*args)
 }

@@ -17,10 +17,15 @@ Design docs (read when relevant): [`workout-tracker-plan.md`](workout-tracker-pl
 - DB access: Spring `JdbcClient` (raw SQL). No JPA/Hibernate, no ORM.
 - Migrations: Flyway, `src/main/resources/db/migration`.
 - Tests: JUnit 5 + Testcontainers (Postgres).
+- Quality: Spotless + ktlint (formatting), Konsist architecture tests (`ArchitectureTest`,
+  run in the suite — they enforce the rules below). detekt is deferred until it ships
+  stable Kotlin 2.2 support (revisit at M6).
 
 ```bash
+./gradlew spotlessApply                     # auto-format Kotlin (ktlint)
 ./gradlew compileKotlin compileTestKotlin   # compile (no Docker needed)
-./gradlew test                              # tests (needs Docker: Testcontainers)
+./gradlew test                              # tests + architecture rules (full run needs Docker)
+./gradlew check                             # spotlessCheck + tests
 ./gradlew bootRun                           # run against local Supabase DB
 supabase start                              # local Postgres :54322, Auth/JWKS :54321
 ```
