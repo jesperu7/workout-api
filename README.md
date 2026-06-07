@@ -29,13 +29,18 @@ staged data model.
   Supabase local stack and Testcontainers) — e.g. colima / OrbStack / Docker Desktop
 - [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started)
 
-## Run locally (M1 — needs Docker)
+## Run locally (needs Docker)
+
+`supabase/config.toml` is committed, so a fresh clone runs the full DB with:
 
 ```bash
-supabase init          # once, in this repo
 supabase start         # boots Postgres (54322) + Auth/JWKS (54321) in Docker
-./gradlew bootRun      # Flyway applies V1/V2 on startup against the local DB
+./gradlew bootRun      # Flyway applies V1/V2 (schema + seed) against the local DB
 ```
+
+> `supabase init` was already run when the repo was created — don't re-run it on a clone.
+> Postgres **data** lives in Docker volumes (not git); the schema + seed are reproduced
+> from the Flyway migrations the moment the app runs (or `./gradlew test`).
 
 Default datasource points at the local Supabase Postgres
 (`jdbc:postgresql://127.0.0.1:54322/postgres`, `postgres`/`postgres`); override
