@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "b1c0ffee-0000-4a00-8000-workoutapi001",
     "name": "workout-api (local)",
-    "description": "Local manual tests for workout-api.\n\nSetup: run `supabase start` and `./gradlew bootRun` first.\n1) Run **Auth -> Sign in** once. Its test script stores `access_token` as a collection variable.\n2) **API -> GET /api/me** then uses that token automatically (collection-level Bearer auth).\n\nEdit values under the collection's Variables tab. The apikey/password are local Supabase dev defaults (not real secrets).",
+    "description": "Local manual tests for workout-api.\n\nSetup: run `supabase start` and `./gradlew bootRun` first.\n\nHappy path (run top to bottom): Auth > Sign in, then Exercises > List (saves exerciseId), Workouts > Create (saves workoutId), Workout exercises > Add (saves workoutExerciseId), Sets > Log (saves setId). Later requests reuse those saved ids automatically.\n\nThe apikey/password are local Supabase dev defaults (not real secrets). The set body must match the exercise's measurement type (e.g. weight+reps for Bench Press).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -15,7 +15,11 @@
     { "key": "apikey", "value": "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH" },
     { "key": "email", "value": "dev@workout.test" },
     { "key": "password", "value": "password123" },
-    { "key": "access_token", "value": "" }
+    { "key": "access_token", "value": "" },
+    { "key": "exerciseId", "value": "" },
+    { "key": "workoutId", "value": "" },
+    { "key": "workoutExerciseId", "value": "" },
+    { "key": "setId", "value": "" }
   ],
   "item": [
     {
@@ -43,11 +47,7 @@
               { "key": "apikey", "value": "{{apikey}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
-              "options": { "raw": { "language": "json" } }
-            },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}", "options": { "raw": { "language": "json" } } },
             "url": {
               "raw": "{{supabaseUrl}}/auth/v1/token?grant_type=password",
               "host": [ "{{supabaseUrl}}" ],
@@ -59,18 +59,6 @@
         },
         {
           "name": "Sign up (create user, first run only)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const res = pm.response.json();",
-                  "if (res.access_token) { pm.collectionVariables.set('access_token', res.access_token); }"
-                ]
-              }
-            }
-          ],
           "request": {
             "auth": { "type": "noauth" },
             "method": "POST",
@@ -78,23 +66,15 @@
               { "key": "apikey", "value": "{{apikey}}" },
               { "key": "Content-Type", "value": "application/json" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
-              "options": { "raw": { "language": "json" } }
-            },
-            "url": {
-              "raw": "{{supabaseUrl}}/auth/v1/signup",
-              "host": [ "{{supabaseUrl}}" ],
-              "path": [ "auth", "v1", "signup" ]
-            },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{supabaseUrl}}/auth/v1/signup", "host": [ "{{supabaseUrl}}" ], "path": [ "auth", "v1", "signup" ] },
             "description": "Creates the dev user (local stack auto-confirms). Skip if it already exists."
           }
         }
       ]
     },
     {
-      "name": "API",
+      "name": "Health & Me",
       "item": [
         {
           "name": "Health (public, no auth)",
@@ -102,61 +82,280 @@
             "auth": { "type": "noauth" },
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/actuator/health",
-              "host": [ "{{baseUrl}}" ],
-              "path": [ "actuator", "health" ]
-            }
+            "url": { "raw": "{{baseUrl}}/actuator/health", "host": [ "{{baseUrl}}" ], "path": [ "actuator", "health" ] }
           }
         },
         {
           "name": "GET /api/me (authenticated)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
-                  "pm.test('returns userId', function () { pm.expect(pm.response.json()).to.have.property('userId'); });"
-                ]
-              }
-            }
-          ],
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/me",
-              "host": [ "{{baseUrl}}" ],
-              "path": [ "api", "me" ]
-            },
-            "description": "Uses the collection Bearer auth ({{access_token}}). Run 'Sign in' first."
+            "url": { "raw": "{{baseUrl}}/api/me", "host": [ "{{baseUrl}}" ], "path": [ "api", "me" ] }
           }
         },
         {
           "name": "GET /api/me (no token -> 401)",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/me", "host": [ "{{baseUrl}}" ], "path": [ "api", "me" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Exercises",
+      "item": [
+        {
+          "name": "List exercises (saves exerciseId)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test('status is 401', function () { pm.response.to.have.status(401); });"
+                  "const arr = pm.response.json();",
+                  "const chosen = arr.find(e => e.name === 'Bench Press') || arr[0];",
+                  "if (chosen) { pm.collectionVariables.set('exerciseId', chosen.id); }",
+                  "pm.test('catalog is non-empty', function () { pm.expect(arr.length).to.be.above(0); });"
                 ]
               }
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/exercises", "host": [ "{{baseUrl}}" ], "path": [ "api", "exercises" ] },
+            "description": "Lists the global catalog and stores Bench Press (or the first result) as exerciseId."
+          }
+        },
+        {
+          "name": "List exercises (filter by type)",
+          "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/me",
+              "raw": "{{baseUrl}}/api/exercises?measurementType=WEIGHT_REPS&limit=50&offset=0",
               "host": [ "{{baseUrl}}" ],
-              "path": [ "api", "me" ]
+              "path": [ "api", "exercises" ],
+              "query": [
+                { "key": "measurementType", "value": "WEIGHT_REPS" },
+                { "key": "category", "value": "push", "disabled": true },
+                { "key": "limit", "value": "50" },
+                { "key": "offset", "value": "0" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get exercise by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/exercises/{{exerciseId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "exercises", "{{exerciseId}}" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workouts",
+      "item": [
+        {
+          "name": "Create workout (saves workoutId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created', function () { pm.response.to.have.status(201); });",
+                  "const id = pm.response.json().id;",
+                  "if (id) { pm.collectionVariables.set('workoutId', id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"notes\": \"Postman session\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/api/workouts", "host": [ "{{baseUrl}}" ], "path": [ "api", "workouts" ] },
+            "description": "performedAt is optional (defaults to now). Stores the new id as workoutId."
+          }
+        },
+        {
+          "name": "List my workouts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/workouts?limit=50&offset=0",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "workouts" ],
+              "query": [ { "key": "limit", "value": "50" }, { "key": "offset", "value": "0" } ]
+            }
+          }
+        },
+        {
+          "name": "Get workout by id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/workouts/{{workoutId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "workouts", "{{workoutId}}" ] }
+          }
+        },
+        {
+          "name": "Update workout (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"notes\": \"updated from Postman\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/api/workouts/{{workoutId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "workouts", "{{workoutId}}" ] }
+          }
+        },
+        {
+          "name": "Delete workout",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/workouts/{{workoutId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "workouts", "{{workoutId}}" ] },
+            "description": "Cascades to its workout-exercises and sets. Expect 204."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workout exercises",
+      "item": [
+        {
+          "name": "Add exercise to workout (saves workoutExerciseId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created', function () { pm.response.to.have.status(201); });",
+                  "const id = pm.response.json().id;",
+                  "if (id) { pm.collectionVariables.set('workoutExerciseId', id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"exerciseId\": \"{{exerciseId}}\",\n  \"notes\": \"top set\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": {
+              "raw": "{{baseUrl}}/api/workouts/{{workoutId}}/exercises",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "workouts", "{{workoutId}}", "exercises" ]
+            }
+          }
+        },
+        {
+          "name": "List exercises in workout",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/workouts/{{workoutId}}/exercises",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "workouts", "{{workoutId}}", "exercises" ]
+            }
+          }
+        },
+        {
+          "name": "Update workout-exercise (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"position\": 2,\n  \"notes\": \"moved\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/api/workout-exercises/{{workoutExerciseId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "workout-exercises", "{{workoutExerciseId}}" ] }
+          }
+        },
+        {
+          "name": "Delete workout-exercise",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/workout-exercises/{{workoutExerciseId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "workout-exercises", "{{workoutExerciseId}}" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Sets",
+      "item": [
+        {
+          "name": "Log a set (saves setId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created', function () { pm.response.to.have.status(201); });",
+                  "const id = pm.response.json().id;",
+                  "if (id) { pm.collectionVariables.set('setId', id); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"weight\": 100,\n  \"reps\": 5,\n  \"rpe\": 8\n}", "options": { "raw": { "language": "json" } } },
+            "url": {
+              "raw": "{{baseUrl}}/api/workout-exercises/{{workoutExerciseId}}/sets",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "workout-exercises", "{{workoutExerciseId}}", "sets" ]
             },
-            "description": "No Authorization header - expect 401."
+            "description": "Body must match the exercise's measurement type. Bench Press is weight_reps => weight + reps (+ optional rpe). A bad combo returns 400."
+          }
+        },
+        {
+          "name": "Log an INVALID set (-> 400)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"reps\": 5\n}", "options": { "raw": { "language": "json" } } },
+            "url": {
+              "raw": "{{baseUrl}}/api/workout-exercises/{{workoutExerciseId}}/sets",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "workout-exercises", "{{workoutExerciseId}}", "sets" ]
+            },
+            "description": "weight_reps without weight -> 400 problem+json from MeasurementValidator."
+          }
+        },
+        {
+          "name": "List sets for a workout-exercise",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/workout-exercises/{{workoutExerciseId}}/sets",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "workout-exercises", "{{workoutExerciseId}}", "sets" ]
+            }
+          }
+        },
+        {
+          "name": "Update set (PATCH)",
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"reps\": 6\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/api/sets/{{setId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "sets", "{{setId}}" ] }
+          }
+        },
+        {
+          "name": "Delete set",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/api/sets/{{setId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "sets", "{{setId}}" ] }
           }
         }
       ]
