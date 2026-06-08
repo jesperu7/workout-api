@@ -17,6 +17,12 @@ spring:
   jackson:
     default-property-inclusion: non_null
 
+  # RFC 7807 problem+json for framework exceptions (bean validation, malformed JSON, type
+  # mismatch, ...), so they match the domain errors from GlobalExceptionHandler.
+  mvc:
+    problemdetails:
+      enabled: true
+
   # Auth: verify Supabase ES256 JWTs locally against the JWKS endpoint (no auth-server round trip).
   # JWKS/issuer differ per environment — override via env (or the prod profile, when added).
   security:
