@@ -3,9 +3,9 @@
 Backend API for a workout tracker. **Kotlin + Spring Boot 4**, **plain SQL via
 `JdbcClient`**, **Flyway** migrations, **Supabase** Postgres + Auth.
 
-Design docs (read when relevant): [`workout-tracker-plan.md`](workout-tracker-plan.md)
-(product + architecture), [`schema.sql`](schema.sql) (full staged data model),
-[`README.md`](README.md) (run instructions).
+Docs (read when relevant): [`ROADMAP.md`](ROADMAP.md) (status + what's next),
+[`workout-tracker-plan.md`](workout-tracker-plan.md) (product + architecture),
+[`schema.sql`](schema.sql) (full staged data model), [`README.md`](README.md) (run instructions).
 
 > The maintainer is newer to Kotlin/backend and wants to write **pure SQL**.
 > Favor clear, conventional code over clever abstractions, and explain non-obvious
@@ -82,9 +82,4 @@ Packages: `config/ common/ auth/ measurement/ exercise/ workout/ history/`.
 - `database-and-sql.md` — JdbcClient SQL, mapping, Flyway (`*Repository.kt`, `*.sql`)
 - `testing.md` — Testcontainers, mandatory authorization tests (`*Test.kt`, `test/`)
 
-## Roadmap
-
-`M0`–`M6` ✅ — v1 feature-complete: auth, exercise catalog, logging (workouts → exercises →
-sets, validated + owner-scoped), bidirectional history, hardening. Next: `[v1.5]` self-authored
-programs, `[v2]` coaching. Build only the current stage's scope; schema is staged `[v1]`/`[v1.5]`/`[v2]`.
-```
+Roadmap & remaining work: see [`ROADMAP.md`](ROADMAP.md).

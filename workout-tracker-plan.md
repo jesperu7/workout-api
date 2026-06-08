@@ -316,6 +316,10 @@ WHERE ps.program_exercise_id = $1;     -- missed sets => actual is NULL
 
 ## 7. Immediate next steps (for Claude Code)
 
+> **Status (2026-06-08):** v1 (everything below) is built and shipped. Current status and the
+> remaining v1.5 / v2 work now live in [`ROADMAP.md`](ROADMAP.md); the original kickoff steps
+> below are kept for context.
+
 1. **Validate `schema.sql`** against a real Postgres / throwaway Supabase project
    — it was authored but NOT run through a live parser. The queries in §6 are a
    good smoke test.

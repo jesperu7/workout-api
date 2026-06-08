@@ -1,9 +1,9 @@
 # workout-api
 
 Backend API for a workout-tracking app. Kotlin + Spring Boot, talking to a
-Supabase Postgres. See [`workout-tracker-plan.md`](workout-tracker-plan.md) for
-the product/architecture plan and [`schema.sql`](schema.sql) for the full
-staged data model.
+Supabase Postgres. See [`ROADMAP.md`](ROADMAP.md) for status & remaining work,
+[`workout-tracker-plan.md`](workout-tracker-plan.md) for the product/architecture plan, and
+[`schema.sql`](schema.sql) for the staged data model.
 
 ## Stack
 
@@ -115,9 +115,6 @@ The `[v1.5]` program tables and `[v2]` coaching tables (and the plan↔actual FK
 constraints) land as later additive migrations. RLS is intentionally deferred
 (see the comment header in `V1`).
 
-## Roadmap
+## Status
 
-`M0`–`M5` ✅ — auth, exercise catalog, logging (workouts → exercises → sets, validated +
-owner-scoped), bidirectional history. `M6` hardening (problem+json errors, real JWT decoder
-test) ✅. **v1 feature-complete.** Later stages (`[v1.5]` programs, `[v2]` coaching) are in
-`workout-tracker-plan.md`.
+v1 is shipped; see [`ROADMAP.md`](ROADMAP.md) for what's done and what's next.
