@@ -3,31 +3,34 @@ package com.workout.api.workout.dto
 import com.workout.api.measurement.MeasurementType
 import com.workout.api.measurement.SetMeasurement
 import com.workout.api.workout.WorkoutSet
+import jakarta.validation.constraints.DecimalMax
+import jakarta.validation.constraints.DecimalMin
+import jakarta.validation.constraints.Min
 import java.math.BigDecimal
 import java.time.OffsetDateTime
 import java.util.UUID
 
 /** Log a set. Which measurement fields are required depends on the exercise's type (validated server-side). */
 data class CreateSetRequest(
-    val setIndex: Int? = null,
+    @field:Min(0) val setIndex: Int? = null,
     val performedAt: OffsetDateTime? = null,
-    val weight: BigDecimal? = null,
-    val reps: Int? = null,
-    val addedWeight: BigDecimal? = null,
-    val durationSeconds: Int? = null,
-    val distanceMeters: BigDecimal? = null,
-    val rpe: BigDecimal? = null,
+    @field:DecimalMin("0") val weight: BigDecimal? = null,
+    @field:Min(0) val reps: Int? = null,
+    @field:DecimalMin("0") val addedWeight: BigDecimal? = null,
+    @field:Min(0) val durationSeconds: Int? = null,
+    @field:DecimalMin("0") val distanceMeters: BigDecimal? = null,
+    @field:DecimalMin("0") @field:DecimalMax("10") val rpe: BigDecimal? = null,
 )
 
 data class UpdateSetRequest(
-    val setIndex: Int? = null,
+    @field:Min(0) val setIndex: Int? = null,
     val performedAt: OffsetDateTime? = null,
-    val weight: BigDecimal? = null,
-    val reps: Int? = null,
-    val addedWeight: BigDecimal? = null,
-    val durationSeconds: Int? = null,
-    val distanceMeters: BigDecimal? = null,
-    val rpe: BigDecimal? = null,
+    @field:DecimalMin("0") val weight: BigDecimal? = null,
+    @field:Min(0) val reps: Int? = null,
+    @field:DecimalMin("0") val addedWeight: BigDecimal? = null,
+    @field:Min(0) val durationSeconds: Int? = null,
+    @field:DecimalMin("0") val distanceMeters: BigDecimal? = null,
+    @field:DecimalMin("0") @field:DecimalMax("10") val rpe: BigDecimal? = null,
 )
 
 /** `userId` and `programSetId` stay internal. `measurementType` is echoed for client convenience. */
