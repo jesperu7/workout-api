@@ -84,7 +84,7 @@ Packages: `config/ common/ auth/ measurement/ exercise/ workout/ history/`.
 
 ## Roadmap
 
-`M0` scaffold ✅ · `M1` local DB + connectivity · `M2` Supabase JWT auth ·
-`M3` exercise catalog · `M4` logging CRUD · `M5` bidirectional history · `M6` hardening.
-Build only the current milestone's scope; the schema is staged `[v1]`/`[v1.5]`/`[v2]`.
+`M0`–`M6` ✅ — v1 feature-complete: auth, exercise catalog, logging (workouts → exercises →
+sets, validated + owner-scoped), bidirectional history, hardening. Next: `[v1.5]` self-authored
+programs, `[v2]` coaching. Build only the current stage's scope; schema is staged `[v1]`/`[v1.5]`/`[v2]`.
 ```

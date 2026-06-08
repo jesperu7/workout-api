@@ -69,9 +69,26 @@ curl -s -H "Authorization: Bearer $TOKEN" localhost:8080/api/me         # -> 200
 curl -s -o /dev/null -w '%{http_code}\n' localhost:8080/api/me          # no token -> 401
 ```
 
-Run this after changing any `spring.security.oauth2.resourceserver.*` config — it's the
-interim guard for the auth decoder until the WireMock ES256 test lands (M6). The same calls
-are in `requests.http` for the IDE REST client.
+Handy after changing any `spring.security.oauth2.resourceserver.*` config (the automated
+guard is `JwtDecoderTest`). The same calls are in `requests.http` for the IDE REST client,
+and `scripts/seed-demo-data.sh` logs a few sets so the history endpoints have data.
+
+## API (v1)
+
+All routes need a Supabase Bearer token except `GET /actuator/health`. JSON is camelCase;
+errors are RFC 7807 `application/problem+json`. Everything user-owned is scoped to the JWT
+`sub` — another user's resource returns `404`.
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/me` | the authenticated user (id + email) |
+| GET | `/api/exercises` `/{id}` | global catalog (`?category=`, `?measurementType=`, `?limit=`, `?offset=`) |
+| GET | `/api/exercises/{id}/history` | `?weight=` reps@weight · `?reps=` weight@reps · neither = over time |
+| POST GET PATCH DELETE | `/api/workouts` (`/{id}`) | workout CRUD |
+| POST GET | `/api/workouts/{id}/exercises` | add / list exercises in a workout |
+| PATCH DELETE | `/api/workout-exercises/{id}` | update / remove a workout-exercise |
+| POST GET | `/api/workout-exercises/{id}/sets` | log / list sets (validated per measurement type) |
+| PATCH DELETE | `/api/sets/{id}` | update / delete a set |
 
 ## Migrations
 
@@ -85,6 +102,7 @@ constraints) land as later additive migrations. RLS is intentionally deferred
 
 ## Roadmap
 
-`M0` scaffold ✅ · `M1` local DB + connectivity ✅ · `M2` Supabase JWT auth ✅ ·
-`M3` exercise catalog ← next · `M4` logging CRUD · `M5` bidirectional history ·
-`M6` hardening. Full detail in `workout-tracker-plan.md`.
+`M0`–`M5` ✅ — auth, exercise catalog, logging (workouts → exercises → sets, validated +
+owner-scoped), bidirectional history. `M6` hardening (problem+json errors, real JWT decoder
+test) ✅. **v1 feature-complete.** Later stages (`[v1.5]` programs, `[v2]` coaching) are in
+`workout-tracker-plan.md`.

@@ -31,13 +31,13 @@ must be tested in code. (See `schema.sql` §5: "test this hardest".)
   and every invalid column combo is rejected.
 - Any other pure function (mappers, calculations).
 
-## Known gap: the real JWT decoder isn't covered
-Auth tests use `jwt()` (a mock principal), which BYPASSES the real `JwtDecoder` — so they
-do not catch a misconfigured algorithm/issuer/audience (this is exactly how the M2
-ES256-vs-RS256 bug slipped past the suite). Closing it needs a WireMock JWKS serving a test
-EC key + a signed ES256 token (planned for M6 hardening). Until then the mitigation is
-**manual**: after changing any `spring.security.oauth2.resourceserver.*` config, run the
-README "Manual auth check" (`scripts/dev-token.sh` + `curl /api/me`).
+## Real JWT decoder coverage
+`JwtDecoderTest` exercises the actual `JwtDecoder` end-to-end: a tiny in-JVM HTTP server
+publishes a test EC key as JWKS, tokens are signed with the matching private key, and it
+asserts a valid ES256 token is accepted while tampered / wrong-audience / expired tokens are
+rejected. The `jwt()`-mock tests bypass the decoder, so this is the one that catches an
+algorithm/audience misconfiguration (e.g. the M2 ES256-vs-RS256 bug). `scripts/dev-token.sh`
+stays as the quick manual check against the live stack.
 
 ## Conventions
 - Descriptive names with backticks:
