@@ -1,6 +1,7 @@
 package com.workout.api.workout
 
 import com.workout.api.auth.userId
+import com.workout.api.common.Page
 import com.workout.api.workout.dto.CreateWorkoutRequest
 import com.workout.api.workout.dto.UpdateWorkoutRequest
 import com.workout.api.workout.dto.WorkoutResponse
@@ -38,7 +39,7 @@ class WorkoutController(
         @AuthenticationPrincipal jwt: Jwt,
         @RequestParam(defaultValue = "50") limit: Int,
         @RequestParam(defaultValue = "0") offset: Int,
-    ): List<WorkoutResponse> = workouts.list(jwt.userId, limit, offset).map { it.toResponse() }
+    ): Page<WorkoutResponse> = workouts.list(jwt.userId, limit, offset).map { it.toResponse() }
 
     @GetMapping("/{id}")
     fun get(

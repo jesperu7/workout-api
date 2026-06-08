@@ -1,6 +1,7 @@
 package com.workout.api.workout
 
 import com.workout.api.common.NotFoundException
+import com.workout.api.common.Page
 import com.workout.api.workout.dto.CreateWorkoutRequest
 import com.workout.api.workout.dto.UpdateWorkoutRequest
 import org.springframework.stereotype.Service
@@ -25,7 +26,11 @@ class WorkoutService(
         userId: UUID,
         limit: Int,
         offset: Int,
-    ): List<Workout> = workouts.findAllForUser(userId, limit.coerceIn(1, 200), offset.coerceAtLeast(0))
+    ): Page<Workout> {
+        val window = limit.coerceIn(1, 200)
+        val start = offset.coerceAtLeast(0)
+        return Page(workouts.findAllForUser(userId, window, start), window, start, workouts.countForUser(userId))
+    }
 
     fun get(
         userId: UUID,

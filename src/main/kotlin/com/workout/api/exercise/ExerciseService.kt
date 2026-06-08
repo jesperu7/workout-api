@@ -1,6 +1,7 @@
 package com.workout.api.exercise
 
 import com.workout.api.common.NotFoundException
+import com.workout.api.common.Page
 import com.workout.api.measurement.MeasurementType
 import org.springframework.stereotype.Service
 import java.util.UUID
@@ -19,7 +20,12 @@ class ExerciseService(
         measurementType: MeasurementType?,
         limit: Int,
         offset: Int,
-    ): List<Exercise> = exercises.findAll(category, measurementType, limit.coerceIn(1, 200), offset.coerceAtLeast(0))
+    ): Page<Exercise> {
+        val window = limit.coerceIn(1, 200)
+        val start = offset.coerceAtLeast(0)
+        val items = exercises.findAll(category, measurementType, window, start)
+        return Page(items, window, start, exercises.count(category, measurementType))
+    }
 
     fun byId(id: UUID): Exercise = exercises.findById(id) ?: throw NotFoundException("exercise $id not found")
 }

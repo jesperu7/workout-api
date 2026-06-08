@@ -77,7 +77,8 @@ and `scripts/seed-demo-data.sh` logs a few sets so the history endpoints have da
 
 All routes need a Supabase Bearer token except `GET /actuator/health`. JSON is camelCase;
 errors are RFC 7807 `application/problem+json`. Everything user-owned is scoped to the JWT
-`sub` — another user's resource returns `404`.
+`sub` — another user's resource returns `404`. The two list endpoints (`/api/exercises`,
+`/api/workouts`) return a page envelope `{ items, total, limit, offset }`; nested lists are plain arrays.
 
 | Method | Path | Purpose |
 |---|---|---|

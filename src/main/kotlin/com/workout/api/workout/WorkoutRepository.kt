@@ -77,6 +77,13 @@ class WorkoutRepository(
             .query(rowMapper)
             .list()
 
+    fun countForUser(userId: UUID): Long =
+        jdbc
+            .sql("SELECT count(*) FROM workouts WHERE user_id = :userId")
+            .param("userId", userId)
+            .query(Long::class.javaObjectType)
+            .single()
+
     fun update(
         id: UUID,
         userId: UUID,

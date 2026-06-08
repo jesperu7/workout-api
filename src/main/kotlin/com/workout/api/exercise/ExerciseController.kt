@@ -1,5 +1,6 @@
 package com.workout.api.exercise
 
+import com.workout.api.common.Page
 import com.workout.api.exercise.dto.ExerciseResponse
 import com.workout.api.exercise.dto.toResponse
 import com.workout.api.measurement.MeasurementType
@@ -21,7 +22,7 @@ class ExerciseController(
         @RequestParam(required = false) measurementType: MeasurementType?,
         @RequestParam(defaultValue = "50") limit: Int,
         @RequestParam(defaultValue = "0") offset: Int,
-    ): List<ExerciseResponse> = exercises.list(category, measurementType, limit, offset).map { it.toResponse() }
+    ): Page<ExerciseResponse> = exercises.list(category, measurementType, limit, offset).map { it.toResponse() }
 
     @GetMapping("/{id}")
     fun byId(

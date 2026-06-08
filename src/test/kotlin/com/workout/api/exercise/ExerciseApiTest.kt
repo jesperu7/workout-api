@@ -32,7 +32,8 @@ class ExerciseApiTest {
     fun `lists the full seeded catalog`() {
         mvc.get("/api/exercises") { with(authed()) }.andExpect {
             status { isOk() }
-            jsonPath("$.length()") { value(25) }
+            jsonPath("$.items.length()") { value(25) }
+            jsonPath("$.total") { value(25) }
         }
     }
 
@@ -40,7 +41,8 @@ class ExerciseApiTest {
     fun `filters by measurement type`() {
         mvc.get("/api/exercises?measurementType=WEIGHT_REPS") { with(authed()) }.andExpect {
             status { isOk() }
-            jsonPath("$.length()") { value(11) }
+            jsonPath("$.items.length()") { value(11) }
+            jsonPath("$.total") { value(11) }
         }
     }
 
@@ -48,7 +50,8 @@ class ExerciseApiTest {
     fun `filters by category`() {
         mvc.get("/api/exercises?category=push") { with(authed()) }.andExpect {
             status { isOk() }
-            jsonPath("$.length()") { value(6) }
+            jsonPath("$.items.length()") { value(6) }
+            jsonPath("$.total") { value(6) }
         }
     }
 

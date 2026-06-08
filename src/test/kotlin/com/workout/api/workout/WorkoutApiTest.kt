@@ -85,7 +85,8 @@ class WorkoutApiTest {
         createWorkout(userB, "b1")
         mvc.get("/api/workouts") { with(asUser(userA)) }.andExpect {
             status { isOk() }
-            jsonPath("$.length()") { value(2) }
+            jsonPath("$.items.length()") { value(2) }
+            jsonPath("$.total") { value(2) }
         }
     }
 

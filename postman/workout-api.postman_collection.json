@@ -115,7 +115,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "const arr = pm.response.json();",
+                  "const arr = pm.response.json().items;",
                   "const chosen = arr.find(e => e.name === 'Bench Press') || arr[0];",
                   "if (chosen) { pm.collectionVariables.set('exerciseId', chosen.id); }",
                   "pm.test('catalog is non-empty', function () { pm.expect(arr.length).to.be.above(0); });"

@@ -52,6 +52,22 @@ class ExerciseRepository(
         return spec.query(rowMapper).list()
     }
 
+    fun count(
+        category: String?,
+        measurementType: MeasurementType?,
+    ): Long {
+        val conditions =
+            buildList {
+                if (category != null) add("category = :category")
+                if (measurementType != null) add("measurement_type = cast(:measurementType as measurement_type)")
+            }
+        val where = if (conditions.isEmpty()) "" else "WHERE " + conditions.joinToString(" AND ")
+        var spec = jdbc.sql("SELECT count(*) FROM exercises $where")
+        if (category != null) spec = spec.param("category", category)
+        if (measurementType != null) spec = spec.param("measurementType", measurementType.dbValue)
+        return spec.query(Long::class.javaObjectType).single()
+    }
+
     fun findById(id: UUID): Exercise? =
         jdbc
             .sql(
