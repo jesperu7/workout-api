@@ -1,0 +1,12 @@
+# Keep the build context small and reproducible: only the wrapper, build scripts, and src
+# are needed. Everything below is rebuilt inside the image or is host/IDE-only state.
+.git
+.gradle
+build
+.kotlin
+.idea
+*.iml
+.claude
+supabase/.branches
+supabase/.temp
+HELP.md

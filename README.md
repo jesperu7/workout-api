@@ -53,6 +53,20 @@ with `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD`.
 
 > Without Docker you can still compile: `./gradlew compileKotlin compileTestKotlin`.
 
+## Docker
+
+```bash
+docker build -t workout-api:local .
+docker run --rm -p 8080:8080 \
+  -e SPRING_DATASOURCE_URL='jdbc:postgresql://host.docker.internal:54322/postgres' \
+  -e SUPABASE_JWKS_URI='http://host.docker.internal:54321/auth/v1/.well-known/jwks.json' \
+  workout-api:local
+```
+
+> Inside a container `localhost` is the container itself, so reach the host's Supabase stack
+> via `host.docker.internal` (DB 54322, JWKS 54321). The multi-stage build runs `bootJar`
+> (no tests — run `./gradlew check` on the host).
+
 ## Manual auth check
 
 Verify the JWT auth path end-to-end against the local stack (two terminals; needs

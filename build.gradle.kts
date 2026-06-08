@@ -65,6 +65,9 @@ spotless {
     }
 }
 
+// The Docker image runs only the executable Spring Boot jar, so skip the plain library jar.
+tasks.named("jar") { enabled = false }
+
 tasks.withType<Test> {
     useJUnitPlatform()
 }
