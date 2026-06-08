@@ -25,6 +25,9 @@ class SecurityConfig {
             authorizeHttpRequests {
                 authorize("/actuator/health", permitAll)
                 authorize("/actuator/health/**", permitAll)
+                authorize("/swagger-ui.html", permitAll)
+                authorize("/swagger-ui/**", permitAll)
+                authorize("/v3/api-docs/**", permitAll)
                 authorize(anyRequest, authenticated)
             }
             oauth2ResourceServer {
