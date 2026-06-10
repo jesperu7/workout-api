@@ -9,7 +9,8 @@ import java.util.UUID
 
 /**
  * Collaborates with [WorkoutService] (parent ownership) and [ExerciseService] (the
- * referenced exercise must exist) so we return precise 404s instead of a DB FK error.
+ * referenced exercise must be visible to the user — global or their own) so we
+ * return precise 404s instead of a DB FK error.
  */
 @Service
 class WorkoutExerciseService(
@@ -24,7 +25,7 @@ class WorkoutExerciseService(
     ): WorkoutExercise {
         workouts.get(userId, workoutId) // 404 unless the workout is yours
         val exerciseId = requireNotNull(req.exerciseId) { "exerciseId is required" }
-        exercises.byId(exerciseId) // 404 if the exercise doesn't exist
+        exercises.byId(userId, exerciseId) // 404 unless it's visible to you (global or yours)
         return repo.insert(workoutId, exerciseId, req.position ?: 0, req.notes)
     }
 

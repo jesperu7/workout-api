@@ -18,4 +18,8 @@ class GlobalExceptionHandler {
     @ExceptionHandler(ValidationException::class)
     fun handleValidation(ex: ValidationException): ProblemDetail =
         ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.message ?: "Invalid request")
+
+    @ExceptionHandler(ConflictException::class)
+    fun handleConflict(ex: ConflictException): ProblemDetail =
+        ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.message ?: "Conflict")
 }

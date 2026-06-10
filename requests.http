@@ -1,8 +1,10 @@
 # Manual API requests (IntelliJ HTTP client / VS Code "REST Client").
 # Get a token first:  TOKEN=$(scripts/dev-token.sh)  then paste it below.
+# Guest (anonymous) token:  scripts/dev-token.sh --guest  -> paste as guestToken.
 
 @host = http://localhost:8080
 @token = paste-access-token-here
+@guestToken = paste-guest-token-here
 
 ### Health — public, no auth
 GET {{host}}/actuator/health
@@ -17,3 +19,28 @@ GET {{host}}/api/me
 ### Me with a garbage token — expect 401
 GET {{host}}/api/me
 Authorization: Bearer not-a-real-jwt
+
+### Search the exercise catalog by name (global + mine)
+GET {{host}}/api/exercises?name=press
+Authorization: Bearer {{token}}
+
+### Create my own exercise — expect 201 (repeat: 409 duplicate name)
+POST {{host}}/api/exercises
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Cable Crossover",
+  "category": "push",
+  "measurementType": "WEIGHT_REPS"
+}
+
+### Create an exercise as a GUEST — expect 403 (members only)
+POST {{host}}/api/exercises
+Authorization: Bearer {{guestToken}}
+Content-Type: application/json
+
+{
+  "name": "Guest Move",
+  "measurementType": "BODYWEIGHT"
+}

@@ -25,7 +25,7 @@ class WorkoutSetService(
         req: CreateSetRequest,
     ): WorkoutSet {
         val workoutExercise = workoutExercises.get(userId, workoutExerciseId) // 404 unless it's yours
-        val exercise = exercises.byId(workoutExercise.exerciseId) // derive type from the exercise, not the client
+        val exercise = exercises.byId(userId, workoutExercise.exerciseId) // derive type from the exercise, not the client
         val measurement = req.toMeasurement()
         MeasurementValidator.validate(exercise.measurementType, measurement) // 400 on a bad combo
         return sets.insert(

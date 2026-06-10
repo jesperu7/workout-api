@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "b1c0ffee-0000-4a00-8000-workoutapi001",
     "name": "workout-api (local)",
-    "description": "Local manual tests for workout-api.\n\nSetup: run `supabase start` and `./gradlew bootRun` first.\n\nHappy path (run top to bottom): Auth > Sign in, then Exercises > List (saves exerciseId), Workouts > Create (saves workoutId), Workout exercises > Add (saves workoutExerciseId), Sets > Log (saves setId). Later requests reuse those saved ids automatically.\n\nThe apikey/password are local Supabase dev defaults (not real secrets). The set body must match the exercise's measurement type (e.g. weight+reps for Bench Press).",
+    "description": "Local manual tests for workout-api.\n\nSetup: run `supabase start` and `./gradlew bootRun` first.\n\nHappy path (run top to bottom): Auth > Sign in, then Exercises > List (saves exerciseId), Workouts > Create (saves workoutId), Workout exercises > Add (saves workoutExerciseId), Sets > Log (saves setId). Later requests reuse those saved ids automatically.\n\nv1.1: Exercises > 'Search exercises by name' and 'Create my exercise' cover user-created exercises (per-user unique names; duplicate -> 409; private to their owner).\n\nThe apikey/password are local Supabase dev defaults (not real secrets). The set body must match the exercise's measurement type (e.g. weight+reps for Bench Press).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -16,7 +16,9 @@
     { "key": "email", "value": "dev@workout.test" },
     { "key": "password", "value": "password123" },
     { "key": "access_token", "value": "" },
+    { "key": "guest_token", "value": "" },
     { "key": "exerciseId", "value": "" },
+    { "key": "myExerciseId", "value": "" },
     { "key": "workoutId", "value": "" },
     { "key": "workoutExerciseId", "value": "" },
     { "key": "setId", "value": "" }
@@ -55,6 +57,33 @@
               "query": [ { "key": "grant_type", "value": "password" } ]
             },
             "description": "Signs in dev@workout.test against local Supabase Auth and stores the access_token."
+          }
+        },
+        {
+          "name": "Sign in as GUEST (anonymous, stores guest_token)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.access_token) { pm.collectionVariables.set('guest_token', res.access_token); }",
+                  "pm.test('got a guest access_token', function () { pm.expect(res.access_token, 'access_token').to.be.a('string'); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "apikey", "value": "{{apikey}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": { "mode": "raw", "raw": "{}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{supabaseUrl}}/auth/v1/signup", "host": [ "{{supabaseUrl}}" ], "path": [ "auth", "v1", "signup" ] },
+            "description": "[v1.1] An EMPTY signup body performs an anonymous sign-in (what supabase-js signInAnonymously() calls). Needs enable_anonymous_sign_ins = true in supabase/config.toml and a restarted stack. Every run creates a brand-new guest auth.users row. The token carries is_anonymous=true, which the backend maps to ROLE_GUEST."
           }
         },
         {
@@ -149,11 +178,71 @@
           }
         },
         {
+          "name": "Search exercises by name",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/exercises?name=press",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "exercises" ],
+              "query": [ { "key": "name", "value": "press" } ]
+            },
+            "description": "Case-insensitive substring search over global + my own exercises ('press' matches 4 seeded globals). The client should search before offering 'create new'."
+          }
+        },
+        {
           "name": "Get exercise by id",
           "request": {
             "method": "GET",
             "header": [],
             "url": { "raw": "{{baseUrl}}/api/exercises/{{exerciseId}}", "host": [ "{{baseUrl}}" ], "path": [ "api", "exercises", "{{exerciseId}}" ] }
+          }
+        },
+        {
+          "name": "Create my exercise (saves myExerciseId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('created (201) or already exists from an earlier run (409)', function () { pm.expect([201, 409]).to.include(pm.response.code); });",
+                  "const res = pm.response.json();",
+                  "if (res.id) { pm.collectionVariables.set('myExerciseId', res.id); }",
+                  "if (pm.response.code === 201) { pm.test('owned, not global', function () { pm.expect(res.global).to.eql(false); }); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman Crossover\",\n  \"category\": \"push\",\n  \"measurementType\": \"WEIGHT_REPS\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/api/exercises", "host": [ "{{baseUrl}}" ], "path": [ "api", "exercises" ] },
+            "description": "[v1.1] Creates a user-owned exercise; the owner comes from the JWT, never the body. Names are unique per user (case-insensitive), so re-running returns 409 problem+json — that's the V3 partial unique index at work. Reusing a global name like 'Bench Press' IS allowed (shadowing); only your own names collide. The new exercise is invisible to other users."
+          }
+        },
+        {
+          "name": "Create exercise as GUEST (-> 403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('guests are read+log only', function () { pm.response.to.have.status(403); });"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "bearer", "bearer": [ { "key": "token", "value": "{{guest_token}}", "type": "string" } ] },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Guest Move\",\n  \"measurementType\": \"BODYWEIGHT\"\n}", "options": { "raw": { "language": "json" } } },
+            "url": { "raw": "{{baseUrl}}/api/exercises", "host": [ "{{baseUrl}}" ], "path": [ "api", "exercises" ] },
+            "description": "[v1.1] Run Auth > 'Sign in as GUEST' first. Anonymous tokens map to ROLE_GUEST, and POST /api/exercises requires ROLE_MEMBER -> 403 problem+json. Guests can still browse the catalog and log workouts/sets."
           }
         }
       ]

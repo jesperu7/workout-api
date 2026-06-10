@@ -38,7 +38,7 @@ CREATE TABLE exercises (
   name              text NOT NULL,
   category          text,                       -- e.g. 'lower', 'push', 'cardio'
   measurement_type  measurement_type NOT NULL,
-  -- owner is NULL for global/built-in exercises, set for user-created ones [v1.5+]
+  -- owner is NULL for global/built-in exercises, set for user-created ones [v1.1]
   created_by        uuid REFERENCES auth.users (id) ON DELETE SET NULL,
   created_at        timestamptz NOT NULL DEFAULT now()
 );
@@ -47,6 +47,10 @@ CREATE TABLE exercises (
 -- names are unique among globals. (Adjust if you want stricter global naming.)
 CREATE UNIQUE INDEX exercises_unique_global_name
   ON exercises (lower(name)) WHERE created_by IS NULL;
+-- [v1.1] ... and the same per user for their own exercises. A user may still
+-- shadow a global name; the catalog name search is the guard against that.
+CREATE UNIQUE INDEX exercises_unique_user_name
+  ON exercises (created_by, lower(name)) WHERE created_by IS NOT NULL;
 
 
 -- =============================================================================

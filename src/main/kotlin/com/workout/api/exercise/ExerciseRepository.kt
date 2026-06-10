@@ -11,6 +11,12 @@ import java.util.UUID
 class ExerciseRepository(
     private val jdbc: JdbcClient,
 ) {
+    private val columns = "id, name, category, measurement_type, created_by, created_at"
+
+    // Visibility rule (the RLS spec in schema.sql): global rows OR the user's own.
+    // Every read filters by this — created_by is never exposed to the caller's control.
+    private val visibleToUser = "(created_by IS NULL OR created_by = :userId)"
+
     private val rowMapper =
         RowMapper { rs, _ ->
             Exercise(
@@ -23,61 +29,103 @@ class ExerciseRepository(
             )
         }
 
-    fun findAll(
+    // WHERE is assembled from FIXED fragments based on which filters are present;
+    // values are always bound as named parameters (never interpolated).
+    private fun filterConditions(
         category: String?,
         measurementType: MeasurementType?,
+        name: String?,
+    ): String =
+        buildList {
+            add(visibleToUser)
+            if (category != null) add("category = :category")
+            if (measurementType != null) add("measurement_type = cast(:measurementType as measurement_type)")
+            // substring search; ILIKE = case-insensitive LIKE (Postgres)
+            if (name != null) add("name ILIKE '%' || :name || '%'")
+        }.joinToString(" AND ")
+
+    private fun JdbcClient.StatementSpec.bindFilters(
+        userId: UUID,
+        category: String?,
+        measurementType: MeasurementType?,
+        name: String?,
+    ): JdbcClient.StatementSpec {
+        var spec = param("userId", userId)
+        if (category != null) spec = spec.param("category", category)
+        if (measurementType != null) spec = spec.param("measurementType", measurementType.dbValue)
+        if (name != null) spec = spec.param("name", name)
+        return spec
+    }
+
+    fun findAll(
+        userId: UUID,
+        category: String?,
+        measurementType: MeasurementType?,
+        name: String?,
         limit: Int,
         offset: Int,
-    ): List<Exercise> {
-        // WHERE is assembled from FIXED fragments based on which filters are present;
-        // values are always bound as named parameters (never interpolated).
-        val conditions =
-            buildList {
-                if (category != null) add("category = :category")
-                if (measurementType != null) add("measurement_type = cast(:measurementType as measurement_type)")
-            }
-        val where = if (conditions.isEmpty()) "" else "WHERE " + conditions.joinToString(" AND ")
-        val sql =
-            """
-            SELECT id, name, category, measurement_type, created_by, created_at
-            FROM exercises
-            $where
-            ORDER BY name
-            LIMIT :limit OFFSET :offset
-            """.trimIndent()
-
-        var spec = jdbc.sql(sql).param("limit", limit).param("offset", offset)
-        if (category != null) spec = spec.param("category", category)
-        if (measurementType != null) spec = spec.param("measurementType", measurementType.dbValue)
-        return spec.query(rowMapper).list()
-    }
-
-    fun count(
-        category: String?,
-        measurementType: MeasurementType?,
-    ): Long {
-        val conditions =
-            buildList {
-                if (category != null) add("category = :category")
-                if (measurementType != null) add("measurement_type = cast(:measurementType as measurement_type)")
-            }
-        val where = if (conditions.isEmpty()) "" else "WHERE " + conditions.joinToString(" AND ")
-        var spec = jdbc.sql("SELECT count(*) FROM exercises $where")
-        if (category != null) spec = spec.param("category", category)
-        if (measurementType != null) spec = spec.param("measurementType", measurementType.dbValue)
-        return spec.query(Long::class.javaObjectType).single()
-    }
-
-    fun findById(id: UUID): Exercise? =
+    ): List<Exercise> =
         jdbc
             .sql(
                 """
-                SELECT id, name, category, measurement_type, created_by, created_at
+                SELECT $columns
                 FROM exercises
-                WHERE id = :id
+                WHERE ${filterConditions(category, measurementType, name)}
+                ORDER BY name
+                LIMIT :limit OFFSET :offset
+                """.trimIndent(),
+            ).bindFilters(userId, category, measurementType, name)
+            .param("limit", limit)
+            .param("offset", offset)
+            .query(rowMapper)
+            .list()
+
+    fun count(
+        userId: UUID,
+        category: String?,
+        measurementType: MeasurementType?,
+        name: String?,
+    ): Long =
+        jdbc
+            .sql("SELECT count(*) FROM exercises WHERE ${filterConditions(category, measurementType, name)}")
+            .bindFilters(userId, category, measurementType, name)
+            .query(Long::class.javaObjectType)
+            .single()
+
+    fun findById(
+        id: UUID,
+        userId: UUID,
+    ): Exercise? =
+        jdbc
+            .sql(
+                """
+                SELECT $columns
+                FROM exercises
+                WHERE id = :id AND $visibleToUser
                 """.trimIndent(),
             ).param("id", id)
+            .param("userId", userId)
             .query(rowMapper)
             .optional()
             .orElse(null)
+
+    fun insert(
+        name: String,
+        category: String?,
+        measurementType: MeasurementType,
+        createdBy: UUID,
+    ): Exercise =
+        jdbc
+            .sql(
+                """
+                INSERT INTO exercises (name, category, measurement_type, created_by)
+                VALUES (:name, :category, cast(:measurementType as measurement_type), :createdBy)
+                RETURNING $columns
+                """.trimIndent(),
+            ).param("name", name)
+            .param("category", category)
+            .param("measurementType", measurementType.dbValue)
+            .param("createdBy", createdBy)
+            .query(rowMapper)
+            .single()
 }

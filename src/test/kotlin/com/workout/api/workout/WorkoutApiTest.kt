@@ -1,6 +1,7 @@
 package com.workout.api.workout
 
 import com.workout.api.TestcontainersConfiguration
+import com.workout.api.config.SupabaseRoleConverter
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -109,6 +110,21 @@ class WorkoutApiTest {
         val id = createWorkout(userA, "temp")
         mvc.delete("/api/workouts/$id") { with(asUser(userA)) }.andExpect { status { isNoContent() } }
         mvc.get("/api/workouts/$id") { with(asUser(userA)) }.andExpect { status { isNotFound() } }
+    }
+
+    @Test
+    fun `guests can log workouts`() {
+        // [v1.1] the member gate covers only catalog creation; anonymous accounts log normally
+        val guest =
+            jwt()
+                .jwt { it.subject(userA.toString()).claim("is_anonymous", true) }
+                .authorities(SupabaseRoleConverter())
+        mvc
+            .post("/api/workouts") {
+                with(guest)
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"notes":"guest session"}"""
+            }.andExpect { status { isCreated() } }
     }
 
     @Test

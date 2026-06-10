@@ -51,7 +51,7 @@ class SetApiTest {
         }
     }
 
-    private fun weightRepsExerciseId(): UUID = exercises.findAll(null, MeasurementType.WEIGHT_REPS, 1, 0).first().id
+    private fun weightRepsExerciseId(): UUID = exercises.findAll(userA, null, MeasurementType.WEIGHT_REPS, null, 1, 0).first().id
 
     /** Create a workout and add a weight_reps exercise to it; return the workout_exercise id. */
     private fun weightRepsWorkoutExercise(user: UUID): String {

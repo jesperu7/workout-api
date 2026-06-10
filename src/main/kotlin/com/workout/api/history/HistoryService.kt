@@ -16,7 +16,7 @@ class HistoryService(
         weight: BigDecimal?,
         reps: Int?,
     ): List<SetHistoryPoint> {
-        exercises.byId(exerciseId) // 404 if the exercise doesn't exist
+        exercises.byId(userId, exerciseId) // 404 unless it's visible to you (global or yours)
         return history.forExercise(userId, exerciseId, weight, reps)
     }
 }

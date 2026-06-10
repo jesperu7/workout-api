@@ -20,7 +20,9 @@ Supabase Postgres. See [`ROADMAP.md`](ROADMAP.md) for status & remaining work,
 
 **Authorization model:** this is a service-role backend, so Supabase RLS is
 *bypassed*. Ownership/coach rules are enforced in Kotlin; the RLS section of
-`schema.sql` is the spec for those checks.
+`schema.sql` is the spec for those checks. Each token also maps to one role from
+the Supabase `is_anonymous` claim — `ROLE_MEMBER` (real account) or `ROLE_GUEST`
+(anonymous sign-in); guests can browse and log but not create catalog content.
 
 ## Prerequisites
 
@@ -81,13 +83,34 @@ curl -s localhost:8080/actuator/health                                  # public
 TOKEN=$(scripts/dev-token.sh)                                           # ES256 token for dev@workout.test
 curl -s -H "Authorization: Bearer $TOKEN" localhost:8080/api/me         # -> 200 {"userId":...,"email":...}
 curl -s -o /dev/null -w '%{http_code}\n' localhost:8080/api/me          # no token -> 401
+
+# guest (anonymous) account — can log, but POST /api/exercises -> 403
+GUEST=$(scripts/dev-token.sh --guest)                                   # mints a fresh anonymous user
+curl -s -o /dev/null -w '%{http_code}\n' -X POST localhost:8080/api/exercises \
+  -H "Authorization: Bearer $GUEST" -H 'Content-Type: application/json' \
+  -d '{"name":"Guest Move","measurementType":"BODYWEIGHT"}'             # members only -> 403
 ```
 
 Handy after changing any `spring.security.oauth2.resourceserver.*` config (the automated
 guard is `JwtDecoderTest`). The same calls are in `requests.http` for the IDE REST client,
 and `scripts/seed-demo-data.sh` logs a few sets so the history endpoints have data.
 
-## API (v1)
+## API docs (Swagger UI)
+
+With the app running (see above), springdoc serves the OpenAPI docs:
+
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- Raw OpenAPI JSON: `http://localhost:8080/v3/api-docs`
+
+Both are public — browsing needs no token (the automated guard is `OpenApiDocsTest`).
+To execute requests from the UI, click **Authorize** and paste a token
+(`scripts/dev-token.sh` mints one for the local stack).
+
+> The spec is generated from the controllers at runtime, so it documents whatever code
+> the running app was built from. If endpoints look stale, the JVM on 8080 predates your
+> changes — `pkill -f com.workout.api.WorkoutApiApplication` clears a stray instance.
+
+## API
 
 All routes need a Supabase Bearer token except `GET /actuator/health`. JSON is camelCase;
 errors are RFC 7807 `application/problem+json`. Everything user-owned is scoped to the JWT
@@ -97,7 +120,8 @@ errors are RFC 7807 `application/problem+json`. Everything user-owned is scoped 
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/me` | the authenticated user (id + email) |
-| GET | `/api/exercises` `/{id}` | global catalog (`?category=`, `?measurementType=`, `?limit=`, `?offset=`) |
+| GET | `/api/exercises` `/{id}` | catalog: global + my exercises (`?name=` search, `?category=`, `?measurementType=`, `?limit=`, `?offset=`) |
+| POST | `/api/exercises` | create my own exercise (members only — guests get `403`; duplicate name per user → `409`) |
 | GET | `/api/exercises/{id}/history` | `?weight=` reps@weight · `?reps=` weight@reps · neither = over time |
 | POST GET PATCH DELETE | `/api/workouts` (`/{id}`) | workout CRUD |
 | POST GET | `/api/workouts/{id}/exercises` | add / list exercises in a workout |
@@ -110,6 +134,8 @@ errors are RFC 7807 `application/problem+json`. Everything user-owned is scoped 
 - `V1__init_v1_logging.sql` — measurement-type enum, `exercises` catalog, and the
   actual-side log (`workouts`, `workout_exercises`, `sets`) + history indexes.
 - `V2__seed_global_exercises.sql` — starter global catalog covering each type.
+- `V3__user_exercise_unique_name.sql` — per-user unique exercise names (user-created
+  exercises, v1.1).
 
 The `[v1.5]` program tables and `[v2]` coaching tables (and the plan↔actual FK
 constraints) land as later additive migrations. RLS is intentionally deferred

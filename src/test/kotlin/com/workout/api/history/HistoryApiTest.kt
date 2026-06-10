@@ -60,7 +60,7 @@ class HistoryApiTest {
                 .param("email", "$id@test.local")
                 .update()
         }
-        benchId = exercises.findAll(null, MeasurementType.WEIGHT_REPS, 1, 0).first().id
+        benchId = exercises.findAll(userA, null, MeasurementType.WEIGHT_REPS, null, 1, 0).first().id
 
         // userA Bench Press: May 1 -> 100x5, 100x5, 100x4 ; May 8 -> 102.5x5
         val d1 = OffsetDateTime.parse("2026-05-01T17:00:00Z")
@@ -127,6 +127,15 @@ class HistoryApiTest {
     @Test
     fun `history for an unknown exercise is 404`() {
         mvc.get("/api/exercises/00000000-0000-0000-0000-000000000000/history") { with(asUser(userA)) }.andExpect {
+            status { isNotFound() }
+        }
+    }
+
+    @Test
+    fun `history for another users exercise is 404`() {
+        // [v1.1] user-created exercises are invisible to others — even their history URL
+        val bPrivate = exercises.insert("B Private Lift", null, MeasurementType.WEIGHT_REPS, userB)
+        mvc.get("/api/exercises/${bPrivate.id}/history") { with(asUser(userA)) }.andExpect {
             status { isNotFound() }
         }
     }

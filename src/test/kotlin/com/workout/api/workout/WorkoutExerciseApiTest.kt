@@ -2,6 +2,7 @@ package com.workout.api.workout
 
 import com.workout.api.TestcontainersConfiguration
 import com.workout.api.exercise.ExerciseRepository
+import com.workout.api.measurement.MeasurementType
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -48,7 +49,7 @@ class WorkoutExerciseApiTest {
         }
     }
 
-    private fun anExerciseId(): UUID = exercises.findAll(null, null, 1, 0).first().id
+    private fun anExerciseId(): UUID = exercises.findAll(userA, null, null, null, 1, 0).first().id
 
     private fun idFrom(body: String) = Regex("\"id\":\"([^\"]+)\"").find(body)!!.groupValues[1]
 
@@ -107,6 +108,20 @@ class WorkoutExerciseApiTest {
                 with(asUser(userB))
                 contentType = MediaType.APPLICATION_JSON
                 content = """{"exerciseId":"$ex"}"""
+            }.andExpect { status { isNotFound() } }
+    }
+
+    @Test
+    fun `cannot add another users exercise to my workout`() {
+        // user B's private exercise is invisible to A — attaching it must 404,
+        // same as an id that doesn't exist at all.
+        val bPrivate = exercises.insert("B Private Move", null, MeasurementType.BODYWEIGHT, userB)
+        val w = createWorkout(userA)
+        mvc
+            .post("/api/workouts/$w/exercises") {
+                with(asUser(userA))
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"exerciseId":"${bPrivate.id}"}"""
             }.andExpect { status { isNotFound() } }
     }
 
