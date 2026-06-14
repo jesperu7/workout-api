@@ -71,9 +71,13 @@ slice as the template.
 - **Cloud + deploy:** create the Supabase cloud project, confirm/rotate to ES256, add the
   `local`/`prod` Spring profile split (env-var homes already wired in `application.yml`), then
   deploy the image. (An auto-memory note tracks this.)
-- **RLS:** the policies in `schema.sql` are a *spec* enforced in Kotlin (this service-role
-  backend bypasses RLS). Apply them as an additive migration only if a direct-to-Postgres
-  client (e.g. the Supabase SDK) is ever introduced.
+- **RLS:** ✅ **lockout shipped** (`V4`). Every public data table has RLS enabled with **no
+  policies**, so the client's public anon key can't reach them via Supabase's PostgREST —
+  all data goes through this backend (which bypasses RLS as table owner). Guarded by
+  `RlsLockoutTest`. The per-user/coach policies in `schema.sql` stay as the *spec* for the
+  in-code ownership checks (and an SDK-direct fallback), and are **not** deployed.
+  Residual at cloud-deploy: flip Supabase's project-level "Enable RLS on new tables" toggle
+  so future tables are locked by default.
 - **detekt:** add once it ships a stable Kotlin 2.2 release (parked; Spotless/ktlint + Konsist
   are already in).
 - **Optional:** richer Konsist layering rules now that real feature code exists (e.g. "a

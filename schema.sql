@@ -265,9 +265,19 @@ $$;
 -- =============================================================================
 -- ROW LEVEL SECURITY
 -- =============================================================================
--- Enable RLS on everything that holds user data. If you instead front the DB
--- with a backend on the service role (which BYPASSES RLS), replicate these same
--- checks in application code — the logic is identical.
+-- DEPLOYED POSTURE (decided): backend-only access with an RLS LOCKOUT.
+-- Clients use Supabase for AUTH ONLY; all data flows through the Kotlin backend.
+-- So on the data tables we ENABLE RLS and apply NO policies (see the V4 migration):
+-- "RLS on + no policy" = deny-all for the anon/authenticated roles PostgREST uses,
+-- so the public anon key can't reach the tables directly. The backend connects as
+-- the table-owner role and bypasses RLS, so it's unaffected.
+--
+-- The policies BELOW are therefore NOT deployed. They are kept as:
+--   (1) the SPEC for the ownership checks the backend enforces in code (the USING
+--       clauses describe exactly what the service layer must replicate), and
+--   (2) a ready-made policy set IF a direct-to-Postgres (SDK-direct) client is ever
+--       introduced — at which point they'd be applied instead of the lockout.
+-- Keep them in sync with the backend's authorization logic.
 
 ALTER TABLE exercises         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE workouts          ENABLE ROW LEVEL SECURITY;

@@ -19,8 +19,9 @@ A workout-tracking app with three core capabilities:
    athlete's workouts. A program author may be the user themselves (self-coached)
    or a separate coach.
 
-A **web dashboard** is where programs are authored (by a coach or the user).
-A **mobile app** handles day-to-day logging.
+A **native iOS app** handles day-to-day logging (the first client — see
+[`ios-app-plan.md`](ios-app-plan.md)). A **web app** for coaches/clients to author
+programs comes later, alongside backend v1.5/v2.
 
 ---
 
@@ -29,13 +30,12 @@ A **mobile app** handles day-to-day logging.
 ### 2.1 Components
 
 ```
-Mobile app (Flutter or native — UNDECIDED, and intentionally not a factor
-            in backend choice)
-   │  Supabase client SDK: sign in -> receives JWT
+Clients:  native iOS app (now)   +   coach/client web app (later)
+   │  Supabase client SDK: sign in (incl. anonymous) -> receives JWT
    ▼
-Backend  (stack UNDECIDED: .NET, Java/Kotlin, or Go)
-   │  • validates Supabase JWT locally (JWKS)
-   │  • business logic + ownership checks
+Backend  (Kotlin + Spring Boot 4 — this repo; service role)
+   │  • validates Supabase JWT locally (JWKS, ES256)
+   │  • business logic + ownership checks (RLS bypassed, enforced in code)
    ▼
 Supabase:  Postgres  +  Auth  +  Storage
 ```
@@ -75,10 +75,16 @@ Supabase:  Postgres  +  Auth  +  Storage
   - Default JWT expiry is short (~5 min) — rely on the client SDK's refresh-token
     handling.
 
-### 2.4 Backend stack — still OPEN (.NET vs Java/Kotlin vs Go)
+### 2.4 Backend stack — DECIDED: Kotlin + Spring Boot
 
-All three validate Supabase JWTs the same way and talk to Postgres cleanly. None
-is a wrong choice. Decision axes:
+**Chosen and built:** Kotlin + Spring Boot 4 (JDK 17), plain SQL via `JdbcClient`,
+Flyway migrations. JWKS-based ES256 verification is batteries-included via
+`spring-boot-starter-oauth2-resource-server`. See [`README.md`](README.md) /
+[`CLAUDE.md`](CLAUDE.md) for the running stack. The original evaluation is kept below for
+context.
+
+All three candidates validate Supabase JWTs the same way and talk to Postgres cleanly.
+None was a wrong choice. Decision axes:
 
 | Axis | .NET | Java/Kotlin (Spring) | Go |
 |------|------|----------------------|-----|
@@ -107,19 +113,19 @@ Two options for reaching Postgres/Storage from the backend:
 2. **Through Supabase REST (PostgREST) / Storage APIs** — less common when you
    already have a backend.
 
-**Key decision still implicitly open:** SDK-direct-with-RLS vs.
-backend-with-service-role.
-- If clients hit Supabase directly → **RLS policies enforce everything** (see
-  schema). Strong fit for the coach access rules.
-- If a backend uses the service role → RLS is bypassed; **replicate the same
-  checks in code**. The logic is identical; the schema's RLS section then serves
-  as the spec for what the backend must enforce.
+**DECIDED: backend-with-service-role.** This repo is that backend — it connects to Postgres
+as the privileged owner role (bypasses RLS), so **ownership is enforced in Kotlin** (the
+schema's RLS section is the spec for those checks). Chosen for a stable, multi-client API
+contract: the same backend serves the **native iOS app** now and the **coach/client web
+app** later, without each client re-implementing RLS logic.
 
-**Does the app even need a backend?** For a personal tracker, the Supabase SDK +
-RLS can do auth, CRUD, and storage with no backend. A backend earns its place
-for: secret third-party calls, heavy business logic, scheduled jobs, data
-clients shouldn't touch directly, or a stable multi-client API contract. Worth
-revisiting before committing to building one.
+Clients use the Supabase SDK for **auth only** — and that's now *enforced*, not just
+intended: the data tables ship an **RLS lockout** (`V4` — RLS enabled, no policies), so the
+public anon key can't reach them through Supabase's auto-exposed PostgREST API. Without this,
+RLS-disabled `public` tables are readable/writable by anyone holding the anon key, bypassing
+the backend entirely (the class of bug behind CVE-2025-48757). The backend bypasses RLS as
+table owner, so it's unaffected. (The earlier "does it even need a backend?" question is
+settled — the multi-client contract is the reason it does.)
 
 ### 2.6 Storage
 
@@ -266,7 +272,8 @@ nothing gets rewritten later. Stages are tagged `[v1] / [v1.5] / [v2]` in
 ### v1.5 — Self-authored programs
 - Add `programs`, `program_workouts`, `program_exercises`, `program_sets`.
 - Add the plan↔actual FK constraints.
-- Web dashboard: build a program for yourself; link logged workouts to it.
+- Authored on the **coach/client web app**: build a program for yourself; link logged
+  workouts to it. (The iOS app stays a logging client; it may *follow* a program later.)
 - owner_id = athlete_id (no coach complexity yet); RLS stays at "own data".
 - **Deliverable:** planned-vs-actual tracking, auto-fill logging from targets.
 
@@ -316,9 +323,10 @@ WHERE ps.program_exercise_id = $1;     -- missed sets => actual is NULL
 
 ## 7. Immediate next steps (for Claude Code)
 
-> **Status (2026-06-08):** v1 (everything below) is built and shipped. Current status and the
-> remaining v1.5 / v2 work now live in [`ROADMAP.md`](ROADMAP.md); the original kickoff steps
-> below are kept for context.
+> **Status (2026-06-13):** v1 + v1.1 are built and shipped (logging, history, user-created
+> exercises, guest accounts). Remaining v1.5 / v2 work lives in [`ROADMAP.md`](ROADMAP.md);
+> the **iOS client** plan + full API contract is in [`ios-app-plan.md`](ios-app-plan.md).
+> The original kickoff steps below are kept for context (steps 1–6 are done).
 
 1. **Validate `schema.sql`** against a real Postgres / throwaway Supabase project
    — it was authored but NOT run through a live parser. The queries in §6 are a
@@ -342,9 +350,10 @@ WHERE ps.program_exercise_id = $1;     -- missed sets => actual is NULL
 |----------|--------|
 | Storage/auth provider | Supabase |
 | JWT signing | Asymmetric (ES256), local JWKS verification |
-| Backend stack | OPEN — .NET / Java-Kotlin / Go |
-| Mobile framework | OPEN — Flutter / native (not a backend factor) |
-| Program author UI | Web dashboard |
+| Backend stack | **Kotlin + Spring Boot 4** (JDK 17, JdbcClient, Flyway) — built |
+| Access control | **Backend-with-service-role**: ownership enforced in Kotlin; clients **RLS-locked out** of direct Postgres/PostgREST access (`V4`) |
+| First client | **Native iOS** (see `ios-app-plan.md`); coach/client **web app** later |
+| Program author UI | Web app (coach/client), with backend v1.5/v2 |
 | Plan vs actual | Two parallel hierarchies, linked by nullable FKs |
 | Plan ↔ actual fidelity | 1-to-1; "3×5" = 3 individual program_set rows |
 | Exercise types | Option B: measurement_type enum + CHECK validation |

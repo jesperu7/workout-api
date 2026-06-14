@@ -5,6 +5,7 @@ Backend API for a workout tracker. **Kotlin + Spring Boot 4**, **plain SQL via
 
 Docs (read when relevant): [`ROADMAP.md`](ROADMAP.md) (status + what's next),
 [`workout-tracker-plan.md`](workout-tracker-plan.md) (product + architecture),
+[`ios-app-plan.md`](ios-app-plan.md) (native iOS client plan + full API contract),
 [`schema.sql`](schema.sql) (full staged data model), [`README.md`](README.md) (run instructions).
 
 > The maintainer is newer to Kotlin/backend and wants to write **pure SQL**.

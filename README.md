@@ -2,7 +2,8 @@
 
 Backend API for a workout-tracking app. Kotlin + Spring Boot, talking to a
 Supabase Postgres. See [`ROADMAP.md`](ROADMAP.md) for status & remaining work,
-[`workout-tracker-plan.md`](workout-tracker-plan.md) for the product/architecture plan, and
+[`workout-tracker-plan.md`](workout-tracker-plan.md) for the product/architecture plan,
+[`ios-app-plan.md`](ios-app-plan.md) for the native iOS client plan + full API contract, and
 [`schema.sql`](schema.sql) for the staged data model.
 
 ## Stack
@@ -18,11 +19,13 @@ Supabase Postgres. See [`ROADMAP.md`](ROADMAP.md) for status & remaining work,
 | Tests | JUnit 5 + Testcontainers (Postgres) |
 | Build | Gradle (Kotlin DSL), wrapper included |
 
-**Authorization model:** this is a service-role backend, so Supabase RLS is
-*bypassed*. Ownership/coach rules are enforced in Kotlin; the RLS section of
-`schema.sql` is the spec for those checks. Each token also maps to one role from
-the Supabase `is_anonymous` claim — `ROLE_MEMBER` (real account) or `ROLE_GUEST`
-(anonymous sign-in); guests can browse and log but not create catalog content.
+**Authorization model:** this is a service-role backend, so it *bypasses* Supabase
+RLS and enforces ownership/coach rules in Kotlin (the RLS section of `schema.sql` is
+the spec for those checks). Clients are **RLS-locked out** of the data tables (`V4`:
+RLS enabled, no policies), so the public anon key can't bypass the API via PostgREST —
+all data goes through this backend; clients use Supabase for auth only. Each token also
+maps to one role from the `is_anonymous` claim — `ROLE_MEMBER` (real account) or
+`ROLE_GUEST` (anonymous sign-in); guests can browse and log but not create catalog content.
 
 ## Prerequisites
 
@@ -136,6 +139,8 @@ errors are RFC 7807 `application/problem+json`. Everything user-owned is scoped 
 - `V2__seed_global_exercises.sql` — starter global catalog covering each type.
 - `V3__user_exercise_unique_name.sql` — per-user unique exercise names (user-created
   exercises, v1.1).
+- `V4__rls_lockout.sql` — enable RLS (no policies) on the data tables so clients can't
+  reach Postgres directly via PostgREST; all access goes through this backend.
 
 The `[v1.5]` program tables and `[v2]` coaching tables (and the plan↔actual FK
 constraints) land as later additive migrations. RLS is intentionally deferred
