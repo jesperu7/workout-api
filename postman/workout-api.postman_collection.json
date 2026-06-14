@@ -200,6 +200,23 @@
           }
         },
         {
+          "name": "Exercise history (over time · ?weight= · ?reps=)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/exercises/{{exerciseId}}/history",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "exercises", "{{exerciseId}}", "history" ],
+              "query": [
+                { "key": "weight", "value": "100", "disabled": true },
+                { "key": "reps", "value": "5", "disabled": true }
+              ]
+            },
+            "description": "The headline bidirectional-history feature, scoped to the caller's own sets. Three modes:\n- no params -> all sets for the exercise, over time;\n- enable ?weight=100 -> reps achieved at that weight, over time;\n- enable ?reps=5 -> weight used at that rep count, over time.\nUses {{exerciseId}} (saved by 'List exercises' = Bench Press). Run scripts/seed-demo-data.sh first so there's data to return. Returns a plain array of points (performedAt + measurement fields)."
+          }
+        },
+        {
           "name": "Create my exercise (saves myExerciseId)",
           "event": [
             {
