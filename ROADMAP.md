@@ -2,8 +2,9 @@
 
 Current status and remaining work for workout-api. See also: design rationale in
 [`workout-tracker-plan.md`](workout-tracker-plan.md), the staged DDL in [`schema.sql`](schema.sql),
-run/usage + endpoints in [`README.md`](README.md), and coding patterns/guardrails in
-[`CLAUDE.md`](CLAUDE.md) + [`.claude/rules/`](.claude/rules).
+run/usage + endpoints in [`README.md`](README.md), coding patterns/guardrails in
+[`CLAUDE.md`](CLAUDE.md) + [`.claude/rules/`](.claude/rules), and forward-looking, not-yet-built
+decisions (hosting, offline-first, guest accounts) in [`planning-notes.md`](planning-notes.md).
 
 ## Done — v1 (shipped)
 

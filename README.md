@@ -3,7 +3,8 @@
 Backend API for a workout-tracking app. Kotlin + Spring Boot, talking to a
 Supabase Postgres. See [`ROADMAP.md`](ROADMAP.md) for status & remaining work,
 [`workout-tracker-plan.md`](workout-tracker-plan.md) for the product/architecture plan,
-[`ios-app-plan.md`](ios-app-plan.md) for the native iOS client plan + full API contract, and
+[`ios-app-plan.md`](ios-app-plan.md) for the native iOS client plan + full API contract,
+[`planning-notes.md`](planning-notes.md) for forward-looking decisions (hosting, offline-first, guests), and
 [`schema.sql`](schema.sql) for the staged data model.
 
 ## Stack
