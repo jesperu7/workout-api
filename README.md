@@ -127,7 +127,7 @@ errors are RFC 7807 `application/problem+json`. Everything user-owned is scoped 
 | GET | `/api/exercises` `/{id}` | catalog: global + my exercises (`?name=` search, `?category=`, `?measurementType=`, `?limit=`, `?offset=`) |
 | POST | `/api/exercises` | create my own exercise (members only — guests get `403`; duplicate name per user → `409`) |
 | GET | `/api/exercises/{id}/history` | `?weight=` reps@weight · `?reps=` weight@reps · neither = over time |
-| POST GET PATCH DELETE | `/api/workouts` (`/{id}`) | workout CRUD |
+| POST GET PATCH DELETE | `/api/workouts` (`/{id}`) | workout CRUD; optional `name` ("Push Day"); list takes `?name=` (exact match) for "repeat last workout" |
 | POST GET | `/api/workouts/{id}/exercises` | add / list exercises in a workout |
 | PATCH DELETE | `/api/workout-exercises/{id}` | update / remove a workout-exercise |
 | POST GET | `/api/workout-exercises/{id}/sets` | log / list sets (validated per measurement type) |
@@ -142,6 +142,7 @@ errors are RFC 7807 `application/problem+json`. Everything user-owned is scoped 
   exercises, v1.1).
 - `V4__rls_lockout.sql` — enable RLS (no policies) on the data tables so clients can't
   reach Postgres directly via PostgREST; all access goes through this backend.
+- `V5__add_workout_name.sql` — optional `name` column on `workouts` (named sessions).
 
 The `[v1.5]` program tables and `[v2]` coaching tables (and the plan↔actual FK
 constraints) land as later additive migrations. RLS is intentionally deferred

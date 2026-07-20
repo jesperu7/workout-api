@@ -285,9 +285,9 @@
           "request": {
             "method": "POST",
             "header": [ { "key": "Content-Type", "value": "application/json" } ],
-            "body": { "mode": "raw", "raw": "{\n  \"notes\": \"Postman session\"\n}", "options": { "raw": { "language": "json" } } },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Push Day\",\n  \"notes\": \"Postman session\"\n}", "options": { "raw": { "language": "json" } } },
             "url": { "raw": "{{baseUrl}}/api/workouts", "host": [ "{{baseUrl}}" ], "path": [ "api", "workouts" ] },
-            "description": "performedAt is optional (defaults to now). Stores the new id as workoutId."
+            "description": "performedAt is optional (defaults to now); name is an optional label (trimmed, blank -> null). Stores the new id as workoutId."
           }
         },
         {
@@ -299,8 +299,13 @@
               "raw": "{{baseUrl}}/api/workouts?limit=50&offset=0",
               "host": [ "{{baseUrl}}" ],
               "path": [ "api", "workouts" ],
-              "query": [ { "key": "limit", "value": "50" }, { "key": "offset", "value": "0" } ]
-            }
+              "query": [
+                { "key": "name", "value": "Push Day", "disabled": true },
+                { "key": "limit", "value": "50" },
+                { "key": "offset", "value": "0" }
+              ]
+            },
+            "description": "Enable ?name= for an exact-match filter (the client's 'repeat last workout' — pair with limit=1 for the newest)."
           }
         },
         {

@@ -20,16 +20,23 @@ class WorkoutService(
     fun create(
         userId: UUID,
         req: CreateWorkoutRequest,
-    ): Workout = workouts.insert(userId, req.performedAt ?: OffsetDateTime.now(), req.notes)
+    ): Workout =
+        workouts.insert(
+            userId = userId,
+            performedAt = req.performedAt ?: OffsetDateTime.now(),
+            name = req.name.normalizedName(),
+            notes = req.notes,
+        )
 
     fun list(
         userId: UUID,
+        name: String?,
         limit: Int,
         offset: Int,
     ): Page<Workout> {
         val window = limit.coerceIn(1, 200)
         val start = offset.coerceAtLeast(0)
-        return Page(workouts.findAllForUser(userId, window, start), window, start, workouts.countForUser(userId))
+        return Page(workouts.findAllForUser(userId, name, window, start), window, start, workouts.countForUser(userId, name))
     }
 
     fun get(
@@ -47,6 +54,8 @@ class WorkoutService(
             id = id,
             userId = userId,
             performedAt = req.performedAt ?: existing.performedAt,
+            // absent/null = unchanged (like notes); a provided value is trimmed, and a blank one clears to null
+            name = if (req.name != null) req.name.normalizedName() else existing.name,
             notes = req.notes ?: existing.notes,
         ) ?: throw NotFoundException("workout $id not found")
     }
@@ -58,3 +67,6 @@ class WorkoutService(
         if (!workouts.deleteForUser(id, userId)) throw NotFoundException("workout $id not found")
     }
 }
+
+/** Trim a workout name and treat blank as absent (null = untitled). */
+private fun String?.normalizedName(): String? = this?.trim()?.ifBlank { null }

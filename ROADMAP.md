@@ -39,6 +39,12 @@ OpenAPI/Swagger UI, and a Dockerfile.
 - Tested: guest → 403 on create (also with the claim absent), member → 201, guests still
   browse + log. Manual check: `scripts/dev-token.sh --guest`.
 
+**Named workouts** (small additive change, for the iOS client's named sessions / "repeat last workout"):
+- `V5` adds an optional `name` column on `workouts` (NULL = untitled). `CreateWorkoutRequest`
+  / update accept it (trimmed; blank clears; `notes` update semantics otherwise mirrored),
+  `WorkoutResponse` returns it, and `GET /api/workouts?name=` filters by exact name.
+  Backward-compatible — existing clients unaffected.
+
 ## Next — v1.5: self-authored programs (the plan side)
 
 Mirror the actual side with the prescribed/plan side, then link them. Build one feature slice

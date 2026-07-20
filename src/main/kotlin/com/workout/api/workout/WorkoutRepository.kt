@@ -14,7 +14,7 @@ import java.util.UUID
 class WorkoutRepository(
     private val jdbc: JdbcClient,
 ) {
-    private val columns = "id, user_id, performed_at, notes, program_workout_id, created_at"
+    private val columns = "id, user_id, performed_at, name, notes, program_workout_id, created_at"
 
     private val rowMapper =
         RowMapper { rs, _ ->
@@ -22,6 +22,7 @@ class WorkoutRepository(
                 id = rs.getObject("id", UUID::class.java),
                 userId = rs.getObject("user_id", UUID::class.java),
                 performedAt = rs.getObject("performed_at", OffsetDateTime::class.java),
+                name = rs.getString("name"),
                 notes = rs.getString("notes"),
                 programWorkoutId = rs.getObject("program_workout_id", UUID::class.java),
                 createdAt = rs.getObject("created_at", OffsetDateTime::class.java),
@@ -31,17 +32,19 @@ class WorkoutRepository(
     fun insert(
         userId: UUID,
         performedAt: OffsetDateTime,
+        name: String?,
         notes: String?,
     ): Workout =
         jdbc
             .sql(
                 """
-                INSERT INTO workouts (user_id, performed_at, notes)
-                VALUES (:userId, :performedAt, :notes)
+                INSERT INTO workouts (user_id, performed_at, name, notes)
+                VALUES (:userId, :performedAt, :name, :notes)
                 RETURNING $columns
                 """.trimIndent(),
             ).param("userId", userId)
             .param("performedAt", performedAt)
+            .param("name", name)
             .param("notes", notes)
             .query(rowMapper)
             .single()
@@ -58,46 +61,57 @@ class WorkoutRepository(
             .optional()
             .orElse(null)
 
+    // Optional exact-match name filter (the client's "repeat last workout"). Fixed SQL
+    // fragment chosen by presence of the filter; the value is always a bound named param.
     fun findAllForUser(
         userId: UUID,
+        name: String?,
         limit: Int,
         offset: Int,
-    ): List<Workout> =
-        jdbc
-            .sql(
-                """
-                SELECT $columns FROM workouts
-                WHERE user_id = :userId
-                ORDER BY performed_at DESC
-                LIMIT :limit OFFSET :offset
-                """.trimIndent(),
-            ).param("userId", userId)
-            .param("limit", limit)
-            .param("offset", offset)
-            .query(rowMapper)
-            .list()
+    ): List<Workout> {
+        val nameFilter = if (name != null) " AND name = :name" else ""
+        var spec =
+            jdbc
+                .sql(
+                    """
+                    SELECT $columns FROM workouts
+                    WHERE user_id = :userId$nameFilter
+                    ORDER BY performed_at DESC
+                    LIMIT :limit OFFSET :offset
+                    """.trimIndent(),
+                ).param("userId", userId)
+                .param("limit", limit)
+                .param("offset", offset)
+        if (name != null) spec = spec.param("name", name)
+        return spec.query(rowMapper).list()
+    }
 
-    fun countForUser(userId: UUID): Long =
-        jdbc
-            .sql("SELECT count(*) FROM workouts WHERE user_id = :userId")
-            .param("userId", userId)
-            .query(Long::class.javaObjectType)
-            .single()
+    fun countForUser(
+        userId: UUID,
+        name: String?,
+    ): Long {
+        val nameFilter = if (name != null) " AND name = :name" else ""
+        var spec = jdbc.sql("SELECT count(*) FROM workouts WHERE user_id = :userId$nameFilter").param("userId", userId)
+        if (name != null) spec = spec.param("name", name)
+        return spec.query(Long::class.javaObjectType).single()
+    }
 
     fun update(
         id: UUID,
         userId: UUID,
         performedAt: OffsetDateTime,
+        name: String?,
         notes: String?,
     ): Workout? =
         jdbc
             .sql(
                 """
-                UPDATE workouts SET performed_at = :performedAt, notes = :notes
+                UPDATE workouts SET performed_at = :performedAt, name = :name, notes = :notes
                 WHERE id = :id AND user_id = :userId
                 RETURNING $columns
                 """.trimIndent(),
             ).param("performedAt", performedAt)
+            .param("name", name)
             .param("notes", notes)
             .param("id", id)
             .param("userId", userId)

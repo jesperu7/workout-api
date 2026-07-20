@@ -37,9 +37,10 @@ class WorkoutController(
     @GetMapping
     fun list(
         @AuthenticationPrincipal jwt: Jwt,
+        @RequestParam(required = false) name: String?,
         @RequestParam(defaultValue = "50") limit: Int,
         @RequestParam(defaultValue = "0") offset: Int,
-    ): Page<WorkoutResponse> = workouts.list(jwt.userId, limit, offset).map { it.toResponse() }
+    ): Page<WorkoutResponse> = workouts.list(jwt.userId, name, limit, offset).map { it.toResponse() }
 
     @GetMapping("/{id}")
     fun get(

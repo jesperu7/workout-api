@@ -62,6 +62,7 @@ CREATE TABLE workouts (
   id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id             uuid NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
   performed_at        timestamptz NOT NULL DEFAULT now(),
+  name                text,                       -- [v1.1] optional label ("Push Day"); NULL = untitled
   notes               text,
   -- [v1.5] link back to the program session this workout was performed from.
   -- Nullable: freestyle workouts leave it NULL. FK added in the v1.5 block below.

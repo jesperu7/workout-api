@@ -146,4 +146,108 @@ class WorkoutApiTest {
             jsonPath("$.notes") { value("private") }
         }
     }
+
+    // ---- named workouts [v1.1] ----
+
+    private fun createNamedWorkout(
+        user: UUID,
+        name: String,
+    ): String {
+        val body =
+            mvc
+                .post("/api/workouts") {
+                    with(asUser(user))
+                    contentType = MediaType.APPLICATION_JSON
+                    content = """{"name":"$name"}"""
+                }.andReturn()
+                .response.contentAsString
+        return Regex("\"id\":\"([^\"]+)\"").find(body)!!.groupValues[1]
+    }
+
+    @Test
+    fun `create with a name trims and echoes it, without a name it is absent`() {
+        mvc
+            .post("/api/workouts") {
+                with(asUser(userA))
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"name":"  Push Day  ","notes":"chest"}"""
+            }.andExpect {
+                status { isCreated() }
+                jsonPath("$.name") { value("Push Day") } // trimmed
+            }
+        // no name -> omitted from the response (Jackson non_null)
+        val id = createWorkout(userA, "untitled")
+        mvc.get("/api/workouts/$id") { with(asUser(userA)) }.andExpect {
+            status { isOk() }
+            jsonPath("$.name") { doesNotExist() }
+        }
+    }
+
+    @Test
+    fun `PATCH sets the name, and a blank value clears it`() {
+        val id = createWorkout(userA, "w")
+        mvc
+            .patch("/api/workouts/$id") {
+                with(asUser(userA))
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"name":"Leg Day"}"""
+            }.andExpect {
+                status { isOk() }
+                jsonPath("$.name") { value("Leg Day") }
+            }
+        mvc
+            .patch("/api/workouts/$id") {
+                with(asUser(userA))
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"name":"   "}"""
+            }.andExpect {
+                status { isOk() }
+                jsonPath("$.name") { doesNotExist() }
+            }
+    }
+
+    @Test
+    fun `PATCH without a name leaves it unchanged`() {
+        val id = createNamedWorkout(userA, "Push Day")
+        mvc
+            .patch("/api/workouts/$id") {
+                with(asUser(userA))
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"notes":"more volume"}"""
+            }.andExpect {
+                status { isOk() }
+                jsonPath("$.name") { value("Push Day") }
+            }
+    }
+
+    @Test
+    fun `an over-length name is rejected`() {
+        val tooLong = "x".repeat(201)
+        mvc
+            .post("/api/workouts") {
+                with(asUser(userA))
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"name":"$tooLong"}"""
+            }.andExpect { status { isBadRequest() } }
+    }
+
+    @Test
+    fun `list carries the name and filters by exact name`() {
+        createNamedWorkout(userA, "Push")
+        createNamedWorkout(userA, "Legs")
+        createNamedWorkout(userA, "Push")
+        // list includes the name
+        mvc.get("/api/workouts") { with(asUser(userA)) }.andExpect {
+            status { isOk() }
+            jsonPath("$.total") { value(3) }
+            jsonPath("$.items[0].name") { exists() }
+        }
+        // exact-match filter — the client's "repeat last workout" query (newest first)
+        mvc.get("/api/workouts?name=Push&limit=1") { with(asUser(userA)) }.andExpect {
+            status { isOk() }
+            jsonPath("$.total") { value(2) }
+            jsonPath("$.items.length()") { value(1) }
+            jsonPath("$.items[0].name") { value("Push") }
+        }
+    }
 }

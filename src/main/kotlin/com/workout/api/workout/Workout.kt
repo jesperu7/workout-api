@@ -8,6 +8,7 @@ data class Workout(
     val id: UUID,
     val userId: UUID,
     val performedAt: OffsetDateTime,
+    val name: String?,
     val notes: String?,
     val programWorkoutId: UUID?,
     val createdAt: OffsetDateTime,

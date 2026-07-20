@@ -65,7 +65,7 @@ class HistoryApiTest {
         // userA Bench Press: May 1 -> 100x5, 100x5, 100x4 ; May 8 -> 102.5x5
         val d1 = OffsetDateTime.parse("2026-05-01T17:00:00Z")
         val d2 = OffsetDateTime.parse("2026-05-08T17:00:00Z")
-        val we = workoutExercises.insert(workouts.insert(userA, d1, null).id, benchId, 0, null)
+        val we = workoutExercises.insert(workouts.insert(userA, d1, null, null).id, benchId, 0, null)
         var idx = 0
 
         fun logSet(
